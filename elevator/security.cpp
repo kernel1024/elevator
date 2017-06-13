@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "security.h"
 #include "service.h"
+#include <Sddl.h>
 
 #include <WtsApi32.h>
 
@@ -27,19 +28,16 @@ BOOL CheckCredentials() {
 		CloseHandle(hProcessToken);
 		return FALSE;
 	}
-	DWORD accLen = MAX_PATH;
-	DWORD domLen = MAX_PATH;
-	wchar_t account[MAX_PATH];
-	wchar_t domain[MAX_PATH];
-	SID_NAME_USE eUse;
-	if (!LookupAccountSidW(NULL,ptg->User.Sid,account,(LPDWORD)&accLen,domain,(LPDWORD)&domLen,&eUse)) {
-		addLogMessage(L"LookupAccountSid failed 2.");
+
+	LPWSTR ssid;
+	if (!ConvertSidToStringSidW(ptg->User.Sid, &ssid)) {
+		addLogMessage(L"ConvertSidToStringSid failed.");
 		free(ptg);
 		CloseHandle(hProcessToken);
 		return FALSE;
 	}
-	BOOL res = ((_wcsicmp(domain,L"nt authority") == 0) &&
-		(_wcsicmp(account,L"system")==0));
+	BOOL res = (_wcsicmp(ssid, L"S-1-5-18") == 0); // LocalSystem account
+	LocalFree((HLOCAL)ssid);
 	return res;
 }
 
